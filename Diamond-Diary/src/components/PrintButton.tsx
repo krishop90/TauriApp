@@ -5,66 +5,91 @@ const PrintButton: React.FC = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const printContent = document.getElementById('print-table')?.innerHTML;
-    if (!printContent) return;
+    const printTable = document.getElementById('print-table');
+    if (!printTable) return;
 
-    printWindow.document.write(`
+    // Get data from the table
+    const headers: string[] = [];
+    const rows: string[][] = [];
+
+    // Get headers (excluding Action column)
+    const headerElements = printTable.querySelectorAll('thead tr th');
+    headerElements.forEach((header, index) => {
+      if (index < headerElements.length - 1) { // Skip last column (Action)
+        headers.push(header.textContent || '');
+      }
+    });
+
+    // Get row data (excluding Action column)
+    const rowElements = printTable.querySelectorAll('tbody tr');
+    rowElements.forEach(row => {
+      const rowData: string[] = [];
+      const cells = row.querySelectorAll('td');
+      cells.forEach((cell, index) => {
+        if (index < cells.length - 1) { // Skip last column (Action)
+          rowData.push(cell.textContent || '-');
+        }
+      });
+      rows.push(rowData);
+    });
+
+    // Get totals
+    const totals = printTable.querySelector('.totals');
+    const totalsText = totals ? totals.textContent || '' : '';
+
+    // Build HTML with explicit TABLE attributes for border
+    let html = `
+      <!DOCTYPE html>
       <html>
-        <head>
-          <title>Print Table</title>
-          <style>
-            /* Match index.css .data-table styles */
-            .data-table {
-              width: 100%;
-              border-collapse: collapse;
-              background: white;
-            }
-            .data-table th, .data-table td {
-              padding: 8px;
-              border: 1px solid black !important;
-              text-align: left;
-            }
-            .data-table th {
-              background:rgb(243, 244, 246); 
-              color: black;
-            }
-            /* Generic table fallback */
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th, td {
-              border: 1px solid black !important;
-              padding: 8px;
-              text-align: left;
-            }
-            /* Print-specific rules */
-            @media print {
-              body * { visibility: hidden; }
-              #print-table, #print-table * { visibility: visible; }
-              #print-table { position: absolute; top: 0; left: 0; width: 100%; }
-              .data-table th, .data-table td, table, th, td {
-                border: 1px solid black !important; /* Lines ensure */
-              }
-              /* Hide Action column */
-              .data-table th:last-child, .data-table td:last-child {
-                display: none !important; /* Last column hide */
-              }
-              .action-buttons {
-                display: none !important; /* Agar class hai toh yeh bhi */
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div id="print-table">${printContent}</div>
-        </body>
-      </html>
-    `);
+      <head>
+        <title>Print Table</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 30px; }
+          h1 { text-align: center; margin-bottom: 20px; }
+          table { border-collapse: collapse; width: 100%; }
+          th { background-color: #2c3e50; color: white; font-weight: bold; }
+          td, th { padding: 8px; text-align: left; }
+          .totals { margin-top: 15px; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <h1>DIAMOND DIARY</h1>
+        <table border="1" cellspacing="0" cellpadding="5">
+          <thead>
+            <tr>`;
+
+    // Add headers
+    headers.forEach(header => {
+      html += `<th>${header}</th>`;
+    });
+
+    html += `</tr>
+          </thead>
+          <tbody>`;
+
+    // Add rows
+    rows.forEach(row => {
+      html += '<tr>';
+      row.forEach(cell => {
+        html += `<td>${cell}</td>`;
+      });
+      html += '</tr>';
+    });
+
+    html += `</tbody>
+        </table>
+        <div class="totals">${totalsText}</div>
+      </body>
+      </html>`;
+
+    printWindow.document.write(html);
     printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+
+    // Use a timeout to ensure the document is fully loaded
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   };
 
   return (
